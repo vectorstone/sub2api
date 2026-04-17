@@ -27,6 +27,18 @@ This directory contains files for deploying Sub2API on Linux servers.
 
 ---
 
+## Google Cloud Platform (GCP)
+
+For a concrete GCP deployment layout, sizing guidance, and monthly cost estimates, see [GCP.md](./GCP.md).
+
+Recommended reading order:
+
+1. Start with **Option A** in `GCP.md` if you want the cheapest production-style launch
+2. Use **Option B** if you want managed PostgreSQL via Cloud SQL
+3. Only consider **Option C** if you explicitly want managed Redis too
+
+---
+
 ## Docker Deployment (Recommended)
 
 ### Method 1: One-Click Deployment (Recommended)

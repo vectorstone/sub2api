@@ -205,6 +205,8 @@ curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/install
 
 Deploy with Docker Compose, including PostgreSQL and Redis containers.
 
+If you plan to deploy on Google Cloud, see [deploy/GCP.md](deploy/GCP.md) for concrete GCP topologies and monthly cost estimates.
+
 #### Prerequisites
 
 - Docker 20.10+

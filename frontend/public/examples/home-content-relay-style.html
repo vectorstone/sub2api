@@ -1,0 +1,100 @@
+<div style="min-height:100vh;background:radial-gradient(circle at top left,#13203a 0%,#0b1220 42%,#060914 100%);color:#e5eefc;padding:56px 24px 72px;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;line-height:1.7;">
+  <div style="max-width:1120px;margin:0 auto;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:8px;">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid rgba(125,211,252,.22);border-radius:999px;background:rgba(56,189,248,.08);color:#93c5fd;font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;">
+        <span style="width:8px;height:8px;border-radius:50%;background:#38bdf8;display:inline-block;"></span>
+        Unified AI Gateway
+      </div>
+      <a href="/dashboard" style="display:inline-flex;align-items:center;justify-content:center;padding:12px 22px;border-radius:999px;background:#ffffff;color:#0f172a;text-decoration:none;font-size:14px;font-weight:700;box-shadow:0 10px 24px rgba(0,0,0,.18);white-space:nowrap;">进入 Dashboard</a>
+    </div>
+
+    <h1 style="margin:24px 0 18px;font-size:56px;line-height:1.05;font-weight:800;letter-spacing:-0.04em;color:#ffffff;">
+      One Key.<br>All AI.
+    </h1>
+
+    <p style="max-width:760px;margin:0 0 32px;font-size:20px;color:#c7d2fe;">
+      统一接入 Claude、GPT、Gemini 等主流模型。一个 API Key，完成多模型路由、账号池切换、透明计费与稳定交付。
+    </p>
+
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:48px;">
+      <span style="padding:10px 16px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:14px;color:#dbeafe;">OpenAI Compatible</span>
+      <span style="padding:10px 16px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:14px;color:#dbeafe;">Multi-Account Pool</span>
+      <span style="padding:10px 16px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:14px;color:#dbeafe;">Transparent Billing</span>
+      <span style="padding:10px 16px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:14px;color:#dbeafe;">Failover Ready</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:stretch;margin-bottom:28px;">
+      <div style="border:1px solid rgba(255,255,255,.08);border-radius:28px;padding:28px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));backdrop-filter:blur(12px);box-shadow:0 20px 60px rgba(0,0,0,.28);">
+        <div style="font-size:13px;color:#93c5fd;text-transform:uppercase;letter-spacing:.16em;margin-bottom:10px;">Why choose this gateway</div>
+        <div style="font-size:16px;color:#cbd5e1;">
+          <p style="margin:0 0 14px;"><strong style="color:#fff;">统一模型入口</strong>：无需分别维护 Claude、GPT、Gemini 的独立接入方式。</p>
+          <p style="margin:0 0 14px;"><strong style="color:#fff;">多账号池调度</strong>：自动分配请求，降低单账号限流与故障影响。</p>
+          <p style="margin:0 0 14px;"><strong style="color:#fff;">透明计费</strong>：支持配额、余额、订阅与实时用量统计。</p>
+          <p style="margin:0;"><strong style="color:#fff;">稳定可控</strong>：支持分组、路由、优先级与故障切换。</p>
+        </div>
+      </div>
+
+      <div style="border:1px solid rgba(255,255,255,.08);border-radius:28px;padding:18px;background:#0b1120;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px 14px;border-bottom:1px solid rgba(255,255,255,.08);">
+          <div style="display:flex;gap:8px;">
+            <span style="width:10px;height:10px;border-radius:50%;background:#fb7185;display:inline-block;"></span>
+            <span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block;"></span>
+            <span style="width:10px;height:10px;border-radius:50%;background:#34d399;display:inline-block;"></span>
+          </div>
+          <span style="font-size:12px;color:#64748b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">relay / request</span>
+        </div>
+
+        <pre style="margin:18px 0 0;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.9;color:#dbeafe;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;"><span style="color:#34d399;">POST</span> /v1/chat/completions
+Authorization: Bearer <span style="color:#67e8f9;">sk-xxxx</span>
+Content-Type: application/json
+
+{
+  <span style="color:#c084fc;">&quot;model&quot;</span>: <span style="color:#fbbf24;">&quot;gpt-4.1&quot;</span>,
+  <span style="color:#c084fc;">&quot;messages&quot;</span>: [
+    {
+      <span style="color:#c084fc;">&quot;role&quot;</span>: <span style="color:#fbbf24;">&quot;user&quot;</span>,
+      <span style="color:#c084fc;">&quot;content&quot;</span>: <span style="color:#fbbf24;">&quot;Hello&quot;</span>
+    }
+  ]
+}</pre>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:40px 0 52px;">
+      <div style="padding:24px;border-radius:24px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.05);">
+        <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:10px;">统一网关</div>
+        <div style="font-size:14px;color:#cbd5e1;">一个 API 入口连接多个 AI 服务，降低接入与维护成本。</div>
+      </div>
+      <div style="padding:24px;border-radius:24px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.05);">
+        <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:10px;">稳定路由</div>
+        <div style="font-size:14px;color:#cbd5e1;">通过多账号池、策略调度与切换机制，提高整体可用性。</div>
+      </div>
+      <div style="padding:24px;border-radius:24px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.05);">
+        <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:10px;">可视化计费</div>
+        <div style="font-size:14px;color:#cbd5e1;">余额、配额、用量、模型明细一目了然，方便团队管理。</div>
+      </div>
+    </div>
+
+    <div style="padding:28px;border-radius:32px;background:linear-gradient(135deg,#0f172a 0%,#111827 100%);border:1px solid rgba(255,255,255,.08);margin-bottom:28px;">
+      <div style="font-size:13px;color:#93c5fd;text-transform:uppercase;letter-spacing:.16em;margin-bottom:12px;">Best fit scenarios</div>
+      <ul style="margin:0;padding-left:20px;color:#dbeafe;font-size:15px;">
+        <li style="margin-bottom:8px;">个人订阅统一转 API</li>
+        <li style="margin-bottom:8px;">团队内部 AI 网关</li>
+        <li style="margin-bottom:8px;">多模型统一管理与切换</li>
+        <li style="margin-bottom:8px;">面向客户的 AI API 服务平台</li>
+        <li>需要计费、配额、分组控制的中转场景</li>
+      </ul>
+    </div>
+
+    <div style="padding:30px;border-radius:32px;background:#ffffff;color:#0f172a;box-shadow:0 20px 60px rgba(0,0,0,.18);">
+      <div style="font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.16em;margin-bottom:12px;">Get started</div>
+      <h2 style="margin:0 0 12px;font-size:34px;line-height:1.15;font-weight:800;">Ready to route your AI workload?</h2>
+      <p style="margin:0 0 18px;font-size:16px;color:#475569;">
+        登录系统，创建 API Key，并将其接入你的应用或客户端，即可开始统一使用多个 AI 模型。
+      </p>
+      <div style="font-size:15px;font-weight:600;color:#0f172a;">
+        一个入口，统一你的 AI 工作流。
+      </div>
+    </div>
+  </div>
+</div>
