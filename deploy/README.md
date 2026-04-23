@@ -259,6 +259,43 @@ docker compose -f docker-compose.local.yml up -d
 
 Your entire deployment (configuration + data) is migrated!
 
+### One-Step Cutover: External PostgreSQL + Redis -> Local Docker State
+
+If your current deployment still points at external PostgreSQL/Redis and you
+want to switch to `docker-compose.local.yml` in one maintenance window:
+
+- PostgreSQL should be migrated with a final `pg_dump` / `psql` import.
+- Redis should normally be treated as disposable cache/state and cold-cut to an
+  empty local Redis unless you explicitly need a more complex Redis migration.
+- The built-in backup feature currently covers **PostgreSQL backups only**; it
+  is not a full PostgreSQL + Redis cutover mechanism.
+
+The repo includes a helper for the recommended cold-cut strategy:
+
+```bash
+cd deploy
+./migrate-external-to-local.sh \
+  --source-dir /opt/sub2api-deploy \
+  --target-dir /opt/sub2api-local \
+  --yes
+```
+
+What the helper does:
+
+1. Validates source/target `.env` files
+2. Starts local `postgres` + `redis`
+3. Stops the old `sub2api` service
+4. Creates a final `pg_dump` from the external PostgreSQL
+5. Imports that dump into the local PostgreSQL container
+6. Starts the new `sub2api` against local PostgreSQL + Redis
+
+Notes:
+
+- Redis is intentionally started empty; users may need to log in again.
+- `postgres_data/` and `redis_data/` must be empty before the first cutover.
+- Keep the old deployment directory intact until you finish post-cutover checks
+  so rollback remains a simple `docker compose start sub2api`.
+
 ---
 
 ## Gemini OAuth Configuration
