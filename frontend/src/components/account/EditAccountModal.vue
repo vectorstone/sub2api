@@ -567,6 +567,46 @@
         </div>
       </div>
 
+      <!-- Vertex Service Account -->
+      <div v-if="(account.platform === 'gemini' || account.platform === 'anthropic') && account.type === 'service_account'" class="space-y-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label class="input-label">Project ID</label>
+            <input
+              v-model="editVertexProjectId"
+              type="text"
+              class="input font-mono"
+              readonly
+              placeholder="从 JSON 自动读取"
+            />
+            <p class="input-hint">Service Account JSON 不在编辑页显示；需要更换 JSON 时请删除账号后重新创建。</p>
+          </div>
+          <div>
+            <label class="input-label">Location</label>
+            <select
+              v-model="editVertexLocation"
+              required
+              class="input font-mono"
+            >
+              <optgroup
+                v-for="group in vertexLocationOptions"
+                :key="group.label"
+                :label="group.label"
+              >
+                <option
+                  v-for="option in group.options"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </optgroup>
+            </select>
+            <p class="input-hint">不同 Vertex 模型可用 location 可能不同，这里选择账号默认 endpoint location。</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Bedrock fields (for bedrock type, both SigV4 and API Key modes) -->
       <div v-if="account.type === 'bedrock'" class="space-y-4">
         <!-- SigV4 fields -->
@@ -1306,6 +1346,64 @@
         </div>
       </div>
 
+      <div
+        v-if="account?.platform === 'openai' && (account?.type === 'oauth' || account?.type === 'apikey')"
+        class="border-t border-gray-200 pt-4 dark:border-dark-600 space-y-4"
+      >
+        <div class="flex items-center justify-between">
+          <div>
+            <label class="input-label mb-0">{{ t('admin.accounts.openai.compactMode') }}</label>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ t('admin.accounts.openai.compactModeDesc') }}
+            </p>
+          </div>
+          <div class="w-44">
+            <Select v-model="openAICompactMode" :options="openAICompactModeOptions" />
+          </div>
+        </div>
+        <div class="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-dark-700 dark:text-gray-300">
+          <span class="font-medium">{{ t(openAICompactStatusKey) }}</span>
+          <span
+            v-if="account?.extra?.openai_compact_checked_at"
+            class="ml-2 text-gray-500 dark:text-gray-400"
+          >
+            {{ t('admin.accounts.openai.compactLastChecked') }}:
+            {{ formatDateTime(new Date(String(account.extra.openai_compact_checked_at))) }}
+          </span>
+        </div>
+        <div>
+          <label class="input-label">{{ t('admin.accounts.openai.compactModelMapping') }}</label>
+          <p class="input-hint">{{ t('admin.accounts.openai.compactModelMappingDesc') }}</p>
+          <div v-if="openAICompactModelMappings.length > 0" class="mb-3 space-y-2">
+            <div
+              v-for="(mapping, index) in openAICompactModelMappings"
+              :key="getOpenAICompactModelMappingKey(mapping)"
+              class="flex items-center gap-2"
+            >
+              <input
+                v-model="mapping.from"
+                type="text"
+                class="input flex-1"
+                :placeholder="t('admin.accounts.fromModel')"
+              />
+              <span class="text-gray-400">→</span>
+              <input
+                v-model="mapping.to"
+                type="text"
+                class="input flex-1"
+                :placeholder="t('admin.accounts.toModel')"
+              />
+              <button type="button" @click="removeOpenAICompactModelMapping(index)" class="text-red-500 hover:text-red-700">
+                <Icon name="trash" size="sm" />
+              </button>
+            </div>
+          </div>
+          <button type="button" @click="addOpenAICompactModelMapping" class="btn btn-secondary text-sm">
+            + {{ t('admin.accounts.addMapping') }}
+          </button>
+        </div>
+      </div>
+
       <div>
         <div class="flex items-center justify-between">
           <div>
@@ -1849,7 +1947,7 @@ import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import { adminAPI } from '@/api/admin'
 import { useQuotaNotifyState } from '@/composables/useQuotaNotifyState'
-import type { Account, Proxy, AdminGroup, CheckMixedChannelResponse } from '@/types'
+import type { Account, Proxy, AdminGroup, CheckMixedChannelResponse, OpenAICompactMode } from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
@@ -1859,7 +1957,7 @@ import GroupSelector from '@/components/common/GroupSelector.vue'
 import ModelWhitelistSelector from '@/components/account/ModelWhitelistSelector.vue'
 import QuotaLimitCard from '@/components/account/QuotaLimitCard.vue'
 import { applyInterceptWarmup } from '@/components/account/credentialsBuilder'
-import { formatDateTimeLocalInput, parseDateTimeLocalInput } from '@/utils/format'
+import { formatDateTime, formatDateTimeLocalInput, parseDateTimeLocalInput } from '@/utils/format'
 import { createStableObjectKeyResolver } from '@/utils/stableObjectKey'
 import {
   OPENAI_WS_MODE_CTX_POOL,
@@ -1929,11 +2027,61 @@ const editBedrockSessionToken = ref('')
 const editBedrockRegion = ref('')
 const editBedrockForceGlobal = ref(false)
 const editBedrockApiKeyValue = ref('')
+const editVertexProjectId = ref('')
+const editVertexClientEmail = ref('')
+const editVertexLocation = ref('us-central1')
+const vertexLocationOptions = [
+  {
+    label: 'Common',
+    options: [
+      { value: 'us-central1', label: 'us-central1 (Iowa)' },
+      { value: 'global', label: 'global' },
+      { value: 'us', label: 'us' },
+      { value: 'eu', label: 'eu' }
+    ]
+  },
+  {
+    label: 'United States',
+    options: [
+      { value: 'us-east1', label: 'us-east1 (South Carolina)' },
+      { value: 'us-east4', label: 'us-east4 (Northern Virginia)' },
+      { value: 'us-east5', label: 'us-east5 (Columbus)' },
+      { value: 'us-south1', label: 'us-south1 (Dallas)' },
+      { value: 'us-west1', label: 'us-west1 (Oregon)' },
+      { value: 'us-west4', label: 'us-west4 (Las Vegas)' }
+    ]
+  },
+  {
+    label: 'Europe',
+    options: [
+      { value: 'europe-west1', label: 'europe-west1 (Belgium)' },
+      { value: 'europe-west2', label: 'europe-west2 (London)' },
+      { value: 'europe-west3', label: 'europe-west3 (Frankfurt)' },
+      { value: 'europe-west4', label: 'europe-west4 (Netherlands)' },
+      { value: 'europe-west6', label: 'europe-west6 (Zurich)' },
+      { value: 'europe-west8', label: 'europe-west8 (Milan)' },
+      { value: 'europe-west9', label: 'europe-west9 (Paris)' }
+    ]
+  },
+  {
+    label: 'Asia Pacific',
+    options: [
+      { value: 'asia-east1', label: 'asia-east1 (Taiwan)' },
+      { value: 'asia-east2', label: 'asia-east2 (Hong Kong)' },
+      { value: 'asia-northeast1', label: 'asia-northeast1 (Tokyo)' },
+      { value: 'asia-northeast3', label: 'asia-northeast3 (Seoul)' },
+      { value: 'asia-south1', label: 'asia-south1 (Mumbai)' },
+      { value: 'asia-southeast1', label: 'asia-southeast1 (Singapore)' },
+      { value: 'australia-southeast1', label: 'australia-southeast1 (Sydney)' }
+    ]
+  }
+] as const
 const isBedrockAPIKeyMode = computed(() =>
   props.account?.type === 'bedrock' &&
   (props.account?.credentials as Record<string, unknown>)?.auth_mode === 'apikey'
 )
 const modelMappings = ref<ModelMapping[]>([])
+const openAICompactModelMappings = ref<ModelMapping[]>([])
 const modelRestrictionMode = ref<'whitelist' | 'mapping'>('whitelist')
 const allowedModels = ref<string[]>([])
 const DEFAULT_POOL_MODE_RETRY_COUNT = 3
@@ -1953,6 +2101,7 @@ const antigravityModelMappings = ref<ModelMapping[]>([])
 const tempUnschedEnabled = ref(false)
 const tempUnschedRules = ref<TempUnschedRuleForm[]>([])
 const getModelMappingKey = createStableObjectKeyResolver<ModelMapping>('edit-model-mapping')
+const getOpenAICompactModelMappingKey = createStableObjectKeyResolver<ModelMapping>('edit-openai-compact-model-mapping')
 const getAntigravityModelMappingKey = createStableObjectKeyResolver<ModelMapping>('edit-antigravity-model-mapping')
 const getTempUnschedRuleKey = createStableObjectKeyResolver<TempUnschedRuleForm>('edit-temp-unsched-rule')
 
@@ -1992,6 +2141,7 @@ const customBaseUrl = ref('')
 
 // OpenAI 自动透传开关（OAuth/API Key）
 const openaiPassthroughEnabled = ref(false)
+const openAICompactMode = ref<OpenAICompactMode>('auto')
 const openaiOAuthResponsesWebSocketV2Mode = ref<OpenAIWSMode>(OPENAI_WS_MODE_OFF)
 const openaiAPIKeyResponsesWebSocketV2Mode = ref<OpenAIWSMode>(OPENAI_WS_MODE_OFF)
 const codexCLIOnlyEnabled = ref(false)
@@ -2045,9 +2195,27 @@ const openaiResponsesWebSocketV2Mode = computed({
 const openAIWSModeConcurrencyHintKey = computed(() =>
   resolveOpenAIWSModeConcurrencyHintKey(openaiResponsesWebSocketV2Mode.value)
 )
+const openAICompactModeOptions = computed(() => [
+  { value: 'auto', label: t('admin.accounts.openai.compactModeAuto') },
+  { value: 'force_on', label: t('admin.accounts.openai.compactModeForceOn') },
+  { value: 'force_off', label: t('admin.accounts.openai.compactModeForceOff') }
+])
 const isOpenAIModelRestrictionDisabled = computed(() =>
   props.account?.platform === 'openai' && openaiPassthroughEnabled.value
 )
+const openAICompactStatusKey = computed(() => {
+  const extra = props.account?.extra as Record<string, unknown> | undefined
+  if (!props.account || props.account.platform !== 'openai') return ''
+  const mode = typeof extra?.openai_compact_mode === 'string' ? extra.openai_compact_mode : 'auto'
+  if (mode === 'force_on') return 'admin.accounts.openai.compactSupported'
+  if (mode === 'force_off') return 'admin.accounts.openai.compactUnsupported'
+  if (typeof extra?.openai_compact_supported === 'boolean') {
+    return extra.openai_compact_supported
+      ? 'admin.accounts.openai.compactSupported'
+      : 'admin.accounts.openai.compactUnsupported'
+  }
+  return 'admin.accounts.openai.compactUnknown'
+})
 
 // Computed: current preset mappings based on platform
 const presetMappings = computed(() => getPresetMappingsByPlatform(props.account?.platform || 'anthropic'))
@@ -2167,6 +2335,9 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   const credentials = newAccount.credentials as Record<string, unknown> | undefined
   interceptWarmupRequests.value = credentials?.intercept_warmup_requests === true
   autoPauseOnExpired.value = newAccount.auto_pause_on_expired === true
+  editVertexProjectId.value = ''
+  editVertexClientEmail.value = ''
+  editVertexLocation.value = 'us-central1'
 
   // Load mixed scheduling setting (only for antigravity accounts)
   mixedScheduling.value = false
@@ -2177,6 +2348,8 @@ const syncFormFromAccount = (newAccount: Account | null) => {
 
   // Load OpenAI passthrough toggle (OpenAI OAuth/API Key)
   openaiPassthroughEnabled.value = false
+  openAICompactMode.value = 'auto'
+  openAICompactModelMappings.value = []
   openaiOAuthResponsesWebSocketV2Mode.value = OPENAI_WS_MODE_OFF
   openaiAPIKeyResponsesWebSocketV2Mode.value = OPENAI_WS_MODE_OFF
   codexCLIOnlyEnabled.value = false
@@ -2184,6 +2357,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   webSearchEmulationMode.value = 'default'
   if (newAccount.platform === 'openai' && (newAccount.type === 'oauth' || newAccount.type === 'apikey')) {
     openaiPassthroughEnabled.value = extra?.openai_passthrough === true || extra?.openai_oauth_passthrough === true
+    openAICompactMode.value = (extra?.openai_compact_mode as OpenAICompactMode) || 'auto'
     openaiOAuthResponsesWebSocketV2Mode.value = resolveOpenAIWSModeFromExtra(extra, {
       modeKey: 'openai_oauth_responses_websockets_v2_mode',
       enabledKey: 'openai_oauth_responses_websockets_v2_enabled',
@@ -2198,6 +2372,11 @@ const syncFormFromAccount = (newAccount: Account | null) => {
     })
     if (newAccount.type === 'oauth') {
       codexCLIOnlyEnabled.value = extra?.codex_cli_only === true
+    }
+    const credentials = newAccount.credentials as Record<string, unknown> | undefined
+    const compactMappings = credentials?.compact_model_mapping as Record<string, string> | undefined
+    if (compactMappings && typeof compactMappings === 'object') {
+      openAICompactModelMappings.value = Object.entries(compactMappings).map(([from, to]) => ({ from, to }))
     }
   }
   if (newAccount.platform === 'anthropic' && newAccount.type === 'apikey') {
@@ -2380,6 +2559,11 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   } else if (newAccount.type === 'upstream' && newAccount.credentials) {
     const credentials = newAccount.credentials as Record<string, unknown>
     editBaseUrl.value = (credentials.base_url as string) || ''
+  } else if ((newAccount.platform === 'gemini' || newAccount.platform === 'anthropic') && newAccount.type === 'service_account' && newAccount.credentials) {
+    const credentials = newAccount.credentials as Record<string, unknown>
+    editVertexProjectId.value = (credentials.project_id as string) || ''
+    editVertexClientEmail.value = (credentials.client_email as string) || ''
+    editVertexLocation.value = (credentials.location as string) || (credentials.vertex_location as string) || 'us-central1'
   } else {
     const platformDefaultUrl =
       newAccount.platform === 'openai'
@@ -2423,6 +2607,15 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   editApiKey.value = ''
 }
 
+async function loadTLSProfiles() {
+  try {
+    const profiles = await adminAPI.tlsFingerprintProfiles.list()
+    tlsFingerprintProfiles.value = profiles.map(p => ({ id: p.id, name: p.name }))
+  } catch {
+    tlsFingerprintProfiles.value = []
+  }
+}
+
 watch(
   [() => props.show, () => props.account],
   ([show, newAccount], [wasShow, previousAccount]) => {
@@ -2436,15 +2629,6 @@ watch(
   },
   { immediate: true }
 )
-
-const loadTLSProfiles = async () => {
-  try {
-    const profiles = await adminAPI.tlsFingerprintProfiles.list()
-    tlsFingerprintProfiles.value = profiles.map(p => ({ id: p.id, name: p.name }))
-  } catch {
-    tlsFingerprintProfiles.value = []
-  }
-}
 
 // Model mapping helpers
 const addModelMapping = () => {
@@ -2466,6 +2650,14 @@ const addPresetMapping = (from: string, to: string) => {
 
 const addAntigravityModelMapping = () => {
   antigravityModelMappings.value.push({ from: '', to: '' })
+}
+
+const addOpenAICompactModelMapping = () => {
+  openAICompactModelMappings.value.push({ from: '', to: '' })
+}
+
+const removeOpenAICompactModelMapping = (index: number) => {
+  openAICompactModelMappings.value.splice(index, 1)
 }
 
 const removeAntigravityModelMapping = (index: number) => {
@@ -2911,6 +3103,14 @@ const handleSubmit = async () => {
       } else if (currentCredentials.model_mapping) {
         newCredentials.model_mapping = currentCredentials.model_mapping
       }
+      if (props.account.platform === 'openai') {
+        const compactModelMapping = buildModelMappingObject('mapping', [], openAICompactModelMappings.value)
+        if (compactModelMapping) {
+          newCredentials.compact_model_mapping = compactModelMapping
+        } else {
+          delete newCredentials.compact_model_mapping
+        }
+      }
 
       // Add pool mode if enabled
       if (poolModeEnabled.value) {
@@ -2950,6 +3150,38 @@ const handleSubmit = async () => {
       // Add intercept warmup requests setting
       applyInterceptWarmup(newCredentials, interceptWarmupRequests.value, 'edit')
 
+      if (!applyTempUnschedConfig(newCredentials)) {
+        return
+      }
+
+      updatePayload.credentials = newCredentials
+    } else if ((props.account.platform === 'gemini' || props.account.platform === 'anthropic') && props.account.type === 'service_account') {
+      const currentCredentials = (props.account.credentials as Record<string, unknown>) || {}
+      const newCredentials: Record<string, unknown> = { ...currentCredentials }
+
+      if (!editVertexProjectId.value.trim()) {
+        appStore.showError('Service Account JSON 缺少 project_id')
+        return
+      }
+      if (!editVertexClientEmail.value.trim()) {
+        appStore.showError('Service Account JSON 缺少 client_email')
+        return
+      }
+      if (!editVertexLocation.value.trim()) {
+        appStore.showError('请填写 Vertex location')
+        return
+      }
+
+      if (!currentCredentials.service_account_json && !currentCredentials.service_account) {
+        appStore.showError('请上传 Service Account JSON')
+        return
+      }
+      newCredentials.project_id = editVertexProjectId.value.trim()
+      newCredentials.client_email = editVertexClientEmail.value.trim()
+      newCredentials.location = editVertexLocation.value.trim()
+      newCredentials.tier_id = 'vertex'
+
+      applyInterceptWarmup(newCredentials, interceptWarmupRequests.value, 'edit')
       if (!applyTempUnschedConfig(newCredentials)) {
         return
       }
@@ -3035,6 +3267,12 @@ const handleSubmit = async () => {
       } else if (currentCredentials.model_mapping) {
         // 透传模式保留现有映射
         newCredentials.model_mapping = currentCredentials.model_mapping
+      }
+      const compactModelMapping = buildModelMappingObject('mapping', [], openAICompactModelMappings.value)
+      if (compactModelMapping) {
+        newCredentials.compact_model_mapping = compactModelMapping
+      } else {
+        delete newCredentials.compact_model_mapping
       }
 
       updatePayload.credentials = newCredentials
@@ -3207,6 +3445,11 @@ const handleSubmit = async () => {
       } else {
         delete newExtra.openai_passthrough
         delete newExtra.openai_oauth_passthrough
+      }
+      if (openAICompactMode.value === 'auto') {
+        delete newExtra.openai_compact_mode
+      } else {
+        newExtra.openai_compact_mode = openAICompactMode.value
       }
 
       if (props.account.type === 'oauth') {
